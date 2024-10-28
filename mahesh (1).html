@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecasting API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f7fa;
+            color: #333;
+        }
+
+        header {
+            background-color: #4A90E2;
+            color: #fff;
+            padding: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: #f4f7fa;
+            padding: 2rem;
+            border-right: 2px solid #ddd;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 1rem;
+        }
+
+        .sidebar label {
+            margin-top: 1rem;
+            display: block;
+            font-weight: bold;
+        }
+
+        .sidebar input, .sidebar button {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .sidebar button {
+            background-color: #4A90E2;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .sidebar button:hover {
+            background-color: #357ABD;
+        }
+
+        main {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        .chart-container {
+            background-color: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .explanation {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: #e9f1fb;
+            border-radius: 8px;
+            border-left: 4px solid #4A90E2;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Top Bar -->
+    <header>
+        <h1>Weather Forecasting API</h1>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <h2>Enter Details</h2>
+            <label for="dateFrom">Date From:</label>
+            <input type="date" id="dateFrom">
+            
+            <label for="dateTo">Date To:</label>
+            <input type="date" id="dateTo">
+            
+            <label for="location">Location:</label>
+            <input type="text" id="location" placeholder="Enter location">
+            
+            <label for="futureDays">Predict for Next (Days):</label>
+            <input type="number" id="futureDays" value="1" min="1" placeholder="Number of days">
+            
+            <button onclick="generateData()">Submit</button>
+        </aside>
+
+        <!-- Content Area -->
+        <main>
+            <!-- Chart Container -->
+            <div class="chart-container">
+                <canvas id="weatherChart"></canvas>
+            </div>
+
+            <!-- Explanation Text -->
+            <div class="explanation">
+                <h3>Temperature and Humidity Overview</h3>
+                <p id="explanationText">Please enter the date range and location to see the temperature and humidity trends.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript for Dynamic Content and Chart -->
+    <script>
+        const ctx = document.getElementById('weatherChart').getContext('2d');
+
+        // Initial empty chart
+        const weatherChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        data: [],
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 2,
+                        fill: false
+                    },
+                    {
+                        label: 'Humidity (%)',
+                        data: [],
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Date' } },
+                    y: { title: { display: true, text: 'Values' } }
+                }
+            }
+        });
+
+        // Function to generate random data and update the chart
+        function generateData() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const location = document.getElementById('location').value;
+            const futureDays = document.getElementById('futureDays').value;
+
+            if (!dateFrom || !dateTo || !location) {
+                alert("Please fill out all fields.");
+                return;
+            }
+
+            const dates = generateDates(new Date(dateFrom), new Date(dateTo));
+            const temperatureData = Array.from({ length: dates.length }, () => Math.floor(Math.random() * 15 + 20));
+            const humidityData = Array.from({ length: dates.length }, () => Math.floor(Math.random() * 50 + 30));
+
+            // Calculate average changes
+            const avgTempChange = temperatureData.reduce((sum, val, idx) => idx > 0 ? sum + (val - temperatureData[idx - 1]) : sum, 0) / (temperatureData.length - 1);
+            const avgHumidityChange = humidityData.reduce((sum, val, idx) => idx > 0 ? sum + (val - humidityData[idx - 1]) : sum, 0) / (humidityData.length - 1);
+
+            // Predict future data
+            const predictedTemperatures = [];
+            const predictedHumidities = [];
+
+            for (let i = 1; i <= futureDays; i++) {
+                const nextDayTemp = Math.round(temperatureData[temperatureData.length - 1] + (avgTempChange * i));
+                const nextDayHumidity = Math.round(humidityData[humidityData.length - 1] + (avgHumidityChange * i));
+
+                predictedTemperatures.push(nextDayTemp);
+                predictedHumidities.push(nextDayHumidity);
+            }
+
+            // Update the chart data
+            weatherChart.data.labels = [...dates, ...Array.from({ length: futureDays }, (_, i) => new Date(Date.now() + i * 86400000).toLocaleDateString())];
+            weatherChart.data.datasets[0].data = [...temperatureData, ...predictedTemperatures];
+            weatherChart.data.datasets[1].data = [...humidityData, ...predictedHumidities];
+            weatherChart.update();
+
+            // Update the explanation text
+            document.getElementById('explanationText').textContent = 
+                `Showing temperature and humidity changes for ${location} from ${dateFrom} to ${dateTo}. Predicted data for the next ${futureDays} days.`;
+        }
+
+        // Function to generate dates between two dates
+        function generateDates(start, end) {
+            const dates = [];
+            let currentDate = start;
+            while (currentDate <= end) {
+                dates.push(new Date(currentDate).toLocaleDateString());
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            return dates;
+        }
+    </script>
+</body>
+</html>
